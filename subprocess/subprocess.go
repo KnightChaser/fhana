@@ -10,8 +10,6 @@ import (
 	"os"
 
 	"fhana/subprocess/ciphers"
-
-	"github.com/joho/godotenv"
 )
 
 // Generates a random hexadecimal string for encryption key
@@ -33,26 +31,21 @@ func saveStringToFile(filename string, data string) error {
 }
 
 func main() {
-	// Parse the --decrypt flag
+	// Parse flags
+	encrypt := flag.Bool("encrypt", false, "Encrypt files in the target directory")
 	decrypt := flag.Bool("decrypt", false, "Decrypt files instead of encrypting")
+	targetDir := flag.String("target-directory", "", "The target directory to encrypt/decrypt")
+	keyFile := flag.String("key-file", "key.txt", "The file to save/load the encryption key")
 	flag.Parse()
 
-	// Load the environment variables from .env file to specify the target directory
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-		return
-	}
-	targetDirectoryAbsolutePath := os.Getenv("TARGET_ABSOLUTE_DIRPATH")
-	if targetDirectoryAbsolutePath == "" {
-		log.Fatalf("TARGET_ABSOLUTE_DIRPATH not found in .env file")
+	if *targetDir == "" {
+		log.Fatalf("Error: target directory must be specified")
 		return
 	}
 
 	if *decrypt {
 		// Decryption procedure is requested. Load the AES key from the file and decrypt the directory
-		// Load the AES key from the file
-		keyHex, err := os.ReadFile("key.txt")
+		keyHex, err := os.ReadFile(*keyFile)
 		if err != nil {
 			log.Fatalf("Error reading key file: %v", err)
 			return
@@ -64,16 +57,15 @@ func main() {
 			return
 		}
 
-		err = ciphers.DecryptDirectory(targetDirectoryAbsolutePath, aesDecryptionKey)
+		err = ciphers.DecryptDirectory(*targetDir, aesDecryptionKey)
 		if err != nil {
 			log.Fatalf("Error decrypting directory: %v", err)
 			return
 		}
 
 		fmt.Println("Decryption completed successfully")
-	} else {
+	} else if *encrypt {
 		// Encryption procedure is requested. Generate a random AES key and encrypt the directory
-		// Generate AES key file
 		randomHexString, err := generateRandomHex(128)
 		if err != nil {
 			log.Fatalf("Error generating random hex: %v", err)
@@ -81,27 +73,28 @@ func main() {
 
 		fmt.Printf("Random hex: %s\n", randomHexString)
 
-		filename := "key.txt"
-		err = saveStringToFile(filename, randomHexString)
+		err = saveStringToFile(*keyFile, randomHexString)
 		if err != nil {
 			log.Fatalf("Error saving to file: %v", err)
 		}
 
-		fmt.Printf("Random hex saved to %s\n", filename)
+		fmt.Printf("Random hex saved to %s\n", *keyFile)
 
-		// Start encryption to the target directory
 		aesEncryptionKey, err := hex.DecodeString(randomHexString)
 		if err != nil {
 			log.Fatalf("Error decoding random hex: %v", err)
 			return
 		}
 
-		err = ciphers.EncryptDirectory(targetDirectoryAbsolutePath, aesEncryptionKey)
+		err = ciphers.EncryptDirectory(*targetDir, aesEncryptionKey)
 		if err != nil {
 			log.Fatalf("Error encrypting directory: %v", err)
 			return
 		}
 
 		fmt.Println("Encryption completed successfully")
+	} else {
+		log.Fatalf("Error: either --encrypt or --decrypt flag must be specified")
+		return
 	}
 }

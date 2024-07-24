@@ -8,22 +8,28 @@ import (
 	"os/exec"
 )
 
-func target() {
-	fmt.Println("This is the target function")
-}
-
 func main() {
-	// Parse the --decrypt flag
+	// Parse the flags
+	encrypt := flag.Bool("encrypt", false, "Encrypt files in the target directory")
 	decrypt := flag.Bool("decrypt", false, "Decrypt files instead of encrypting")
+	targetDir := flag.String("target-directory", "", "The target directory to encrypt/decrypt")
+	keyFile := flag.String("key-file", "key.txt", "The file to save/load the encryption key")
 	flag.Parse()
 
-	target()
+	if *targetDir == "" {
+		fmt.Println("Error: target directory must be specified")
+		return
+	}
 
 	var cmd *exec.Cmd
 	if *decrypt {
-		cmd = exec.Command("go", "run", "./subprocess/subprocess.go", "--decrypt")
+		cmd = exec.Command("go", "run", "./subprocess/subprocess.go", "--decrypt", "--target-directory", *targetDir, "--key-file", *keyFile)
+	} else if *encrypt {
+		cmd = exec.Command("go", "run", "./subprocess/subprocess.go", "--encrypt", "--target-directory", *targetDir, "--key-file", *keyFile)
 	} else {
-		cmd = exec.Command("go", "run", "./subprocess/subprocess.go")
+		fmt.Println("Error: either --encrypt or --decrypt flag must be specified")
+		return
+
 	}
 
 	var out, stderr bytes.Buffer
