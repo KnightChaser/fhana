@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"os/exec"
 )
@@ -12,9 +13,18 @@ func target() {
 }
 
 func main() {
+	// Parse the --decrypt flag
+	decrypt := flag.Bool("decrypt", false, "Decrypt files instead of encrypting")
+	flag.Parse()
+
 	target()
 
-	cmd := exec.Command("go", "run", "./subprocess/subprocess.go")
+	var cmd *exec.Cmd
+	if *decrypt {
+		cmd = exec.Command("go", "run", "./subprocess/subprocess.go", "--decrypt")
+	} else {
+		cmd = exec.Command("go", "run", "./subprocess/subprocess.go")
+	}
 
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &out
