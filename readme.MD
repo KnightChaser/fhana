@@ -45,7 +45,6 @@ A lightweight and simple **ransomware** implementation written in Go language, f
    go mod tidy
    ```
    - Note: Currently, there are no additional external packages to install. You may skip this for now.
-   - You can use `go build` to use `fhana` as a standalone executable.
 
 3. **Encryption**:
    - To encrypt files in the target directory and save the key in the specified key file:

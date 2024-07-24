@@ -29,7 +29,6 @@ func main() {
 	} else {
 		fmt.Println("Error: either --encrypt or --decrypt flag must be specified")
 		return
-
 	}
 
 	var out, stderr bytes.Buffer
