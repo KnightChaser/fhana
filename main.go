@@ -1,4 +1,4 @@
-// <PROJECT_DIR>/main.go
+// <PROJECT DIR>/main.go
 package main
 
 import (
@@ -16,8 +16,7 @@ func main() {
 
 	cmd := exec.Command("go", "run", "./subprocess/subprocess.go")
 
-	var out bytes.Buffer
-	var stderr bytes.Buffer
+	var out, stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
@@ -27,6 +26,8 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Subprocess output: %v\n", out.String())
+	fmt.Println("Subprocess output:")
+	fmt.Println(out.String())
+
 	fmt.Println("Subprocess ran successfully")
 }
